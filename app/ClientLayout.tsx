@@ -171,61 +171,83 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
 
         {/* Right: Security & Time */}
-        <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-          
-          {/* ADMIN BADGE */}
-          {session?.user?.email === "23ec017@charusat.edu.in" && (
-            <div style={{
-              fontSize: '9px',
-              color: '#50fa7b',
-              border: '1px solid #50fa7b',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              backgroundColor: 'rgba(80, 250, 123, 0.1)',
-              fontWeight: 'bold',
-              letterSpacing: '1px'
-            }}>
-              SECURE_LINK: ACTIVE
-            </div>
-          )}
+<div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+  
+  {/* ADMIN BADGE */}
+  {session?.user?.email === "23ec017@charusat.edu.in" && (
+    <div style={{
+      fontSize: '9px',
+      color: '#50fa7b',
+      border: '1px solid #50fa7b',
+      padding: '2px 8px',
+      borderRadius: '4px',
+      backgroundColor: 'rgba(80, 250, 123, 0.1)',
+      fontWeight: 'bold',
+      letterSpacing: '1px'
+    }}>
+      SECURE_LINK: ACTIVE
+    </div>
+  )}
 
-          <span className="hidden md:inline-block" style={{ color: '#50fa7b', fontSize: '11px', fontWeight: 'bold' }}>
-            {time || "BOOTING..."}
-          </span>
-          
-          {status === "authenticated" && session?.user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <img 
-                src={session.user.image || ""} 
-                alt="Root Admin" 
-                style={{ width: '28px', height: '28px', borderRadius: '50%', border: '2px solid #50fa7b', padding: '2px', objectFit: 'cover' }}
-              />
-              <button 
-                onClick={handleLogout}
-                style={{
-                  backgroundColor: 'rgba(255, 85, 85, 0.05)',
-                  border: '1px solid #ff5555',
-                  color: '#ff5555',
-                  padding: '6px 14px', 
-                  borderRadius: '6px', 
-                  fontSize: '11px', 
-                  fontWeight: 'bold',
-                  cursor: 'pointer', 
-                  fontFamily: 'monospace', 
-                  transition: 'all 0.3s ease',
-                }} 
-              >
-                [ ROOT_EXIT ]
-              </button>
-            </div>
-          ) : (
-            <Link href="/login" style={{ textDecoration: 'none' }}>
-              <div style={{ backgroundColor: 'rgba(80, 250, 123, 0.1)', border: '1px solid #50fa7b', color: '#50fa7b', padding: '6px 14px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'monospace' }}>
-                [ ROOT_LOGIN ]
-              </div>
-            </Link>
-          )}
-        </div>
+  <span className="hidden md:inline-block" style={{ color: '#50fa7b', fontSize: '11px', fontWeight: 'bold' }}>
+    {time || "BOOTING..."}
+  </span>
+  
+  {status === "authenticated" && session?.user ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+      <img 
+        // 🎯 FIX: If user.image is missing (Credentials login), generate a UI Avatar
+        src={session.user.image || `https://ui-avatars.com/api/?name=${session.user.name || 'Admin'}&background=0f111a&color=00d2ff&bold=true`} 
+        alt="User Session" 
+        style={{ 
+          width: '28px', 
+          height: '28px', 
+          borderRadius: '50%', 
+          border: '2px solid #50fa7b', 
+          padding: '2px', 
+          objectFit: 'cover' 
+        }}
+        // 🎯 EXTRA SAFETY: If the image URL itself fails to load
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = "https://ui-avatars.com/api/?name=Root&background=0f111a&color=ff5555";
+        }}
+      />
+      <button 
+        onClick={handleLogout}
+        style={{
+          backgroundColor: 'rgba(255, 85, 85, 0.05)',
+          border: '1px solid #ff5555',
+          color: '#ff5555',
+          padding: '6px 14px', 
+          borderRadius: '6px', 
+          fontSize: '11px', 
+          fontWeight: 'bold',
+          cursor: 'pointer', 
+          fontFamily: 'monospace', 
+          transition: 'all 0.3s ease',
+        }} 
+      >
+        [ ROOT_EXIT ]
+      </button>
+    </div>
+  ) : (
+    <Link href="/login" style={{ textDecoration: 'none' }}>
+      <div style={{ 
+        backgroundColor: 'rgba(80, 250, 123, 0.1)', 
+        border: '1px solid #50fa7b', 
+        color: '#50fa7b', 
+        padding: '6px 14px', 
+        borderRadius: '6px', 
+        fontSize: '11px', 
+        fontWeight: 'bold', 
+        cursor: 'pointer', 
+        fontFamily: 'monospace' 
+      }}>
+        [ ROOT_LOGIN ]
+      </div>
+    </Link>
+  )}
+</div>
       </nav>
 
       {/* SCANLINES OVERLAY */}

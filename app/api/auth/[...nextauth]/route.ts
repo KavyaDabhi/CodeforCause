@@ -25,25 +25,27 @@ const handler = NextAuth({
       allowDangerousEmailAccountLinking: true, 
     }),
 
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" }
-      },
-      async authorize(credentials) {
-        // Manual login logic (used for local testing or secondary admin access)
-        if (credentials?.email) {
-          return { 
-            id: credentials.email, 
-            email: credentials.email, 
-            name: "Root Admin" 
-          };
-        }
-        return null;
-      }
-    })
+  CredentialsProvider({
+  name: "Credentials",
+  credentials: {
+    email: { label: "Email", type: "text" },
+    password: { label: "Password", type: "password" }
+  },
+  async authorize(credentials) {
+    if (credentials?.email) {
+      return { 
+        id: credentials.email, 
+        email: credentials.email, 
+        name: "Root Admin",
+        // 🎯 ADD THIS: A default avatar for manual logins
+        image: "https://ui-avatars.com/api/?name=Root+Admin&background=00d2ff&color=fff" 
+      };
+    }
+    return null;
+  }
+}),
   ],
+
 
   session: {
     strategy: "jwt",
@@ -64,21 +66,24 @@ const handler = NextAuth({
   }
   return true;
 },
-    async jwt({ token, user }) {
-      if (user) {
-        token.email = user.email;
-        token.id = user.id;
-      }
-      return token;
-    },
+    
+  async jwt({ token, user }) {
+    if (user) {
+      token.email = user.email;
+      token.id = user.id;
+      token.picture = user.image; // 🎯 Make sure the picture is captured
+    }
+    return token;
+  },
 
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.email = token.email as string;
-        session.user.id = token.id as string;
-      }
-      return session;
-    },
+  async session({ session, token }) {
+    if (session.user) {
+      session.user.email = token.email as string;
+      session.user.id = token.id as string;
+      session.user.image = token.picture as string; // 🎯 Sync it to the session
+    }
+    return session;
+  },
 
     async redirect({ url, baseUrl }) {
       // 🎯 FORCE the redirect to the main domain to break the loop
