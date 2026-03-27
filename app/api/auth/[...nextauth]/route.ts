@@ -52,21 +52,13 @@ const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
 
   callbacks: {
-    // 1. 🛡️ STRICT FILTER: Only allow CHARUSAT emails for Google Auth
     async signIn({ user, account }) {
       if (account?.provider === "google") {
-        const email = user.email?.toLowerCase();
-        const isCharusat = email?.endsWith("@charusat.edu.in");
-        
-        if (!isCharusat) {
-          console.log(`[ AUTH_DENIED ]: ${email} is not a valid @charusat.edu.in account.`);
-          return false; 
-        }
+        return !!user.email?.toLowerCase().endsWith("@charusat.edu.in");
       }
       return true;
     },
 
-    // 2. JWT Callback: Passes user info to the token
     async jwt({ token, user }) {
       if (user) {
         token.email = user.email;
@@ -75,7 +67,6 @@ const handler = NextAuth({
       return token;
     },
 
-    // 3. Session Callback: Synchronizes token data to the frontend session object
     async session({ session, token }) {
       if (session.user) {
         session.user.email = token.email as string;
@@ -84,18 +75,18 @@ const handler = NextAuth({
       return session;
     },
 
-    // 4. Redirect Logic: Prevents the "callback loop" on Vercel
     async redirect({ url, baseUrl }) {
+      // 🎯 FORCE the redirect to the main domain to break the loop
       if (url.startsWith("/")) return `${baseUrl}${url}`;
+      // Allow redirects to the same origin
       else if (new URL(url).origin === baseUrl) return url;
       return baseUrl;
     },
   },
-
-  pages: {
-    signIn: "/login",
-    error: "/login", // Redirects any Auth errors back to your custom terminal login
-  },
+  // 🎯 Add this to debug in Vercel Logs
+  debug: true,
 });
+
+
 
 export { handler as GET, handler as POST };
