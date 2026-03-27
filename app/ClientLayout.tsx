@@ -196,22 +196,22 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   {status === "authenticated" && session?.user ? (
     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
       <img 
-        // 🎯 FIX: If user.image is missing (Credentials login), generate a UI Avatar
-        src={session.user.image || `https://ui-avatars.com/api/?name=${session.user.name || 'Admin'}&background=0f111a&color=00d2ff&bold=true`} 
-        alt="User Session" 
-        style={{ 
-          width: '28px', 
-          height: '28px', 
-          borderRadius: '50%', 
-          border: '2px solid #50fa7b', 
-          padding: '2px', 
-          objectFit: 'cover' 
-        }}
-        // 🎯 EXTRA SAFETY: If the image URL itself fails to load
-        onError={(e) => {
-          (e.target as HTMLImageElement).src = "https://ui-avatars.com/api/?name=Root&background=0f111a&color=ff5555";
-        }}
-      />
+  // 🎯 If Google photo exists, use it. 
+  // 🎯 If Credentials login, it uses the email prefix (e.g., '23ec017' -> '23')
+  src={session.user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || 'User')}&background=0f111a&color=00d2ff&bold=true&length=2`} 
+  alt="User Session" 
+  style={{ 
+    width: '28px', 
+    height: '28px', 
+    borderRadius: '50%', 
+    border: '2px solid #50fa7b', 
+    padding: '2px', 
+    objectFit: 'cover' 
+  }}
+  onError={(e) => {
+    (e.target as HTMLImageElement).src = "https://ui-avatars.com/api/?name=U&background=0f111a&color=ff5555";
+  }}
+/>
       <button 
         onClick={handleLogout}
         style={{
