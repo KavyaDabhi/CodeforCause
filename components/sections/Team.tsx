@@ -121,7 +121,7 @@ export default function TeamPage() {
         <div className="h-[1px] w-32 bg-gradient-to-r from-transparent via-[#00d2ff]/40 to-transparent mx-auto mt-8" />
       </div>
 
-      {/* LEADERSHIP SECTION */}
+     {/* LEADERSHIP SECTION */}
       <div className="w-full max-w-6xl z-10 mb-14 md:mb-20 flex flex-col items-center animate-fadeUp">
         <h2 className="text-[#00d2ff] font-mono text-xs md:text-sm tracking-[0.3em] uppercase mb-6 md:mb-8 font-bold">
           EXECUTIVE_LEADERSHIP
@@ -143,9 +143,11 @@ export default function TeamPage() {
                   {member.icon}
                 </div>
               </div>
-              <div className="flex flex-col sm:items-center">
+              {/* 🎯 FIX APPLIED HERE: items-start sm:items-center */}
+              <div className="flex flex-col items-start sm:items-center">
                 <h3 className="text-base md:text-xl font-bold text-white uppercase tracking-wide mb-2 sm:text-center group-hover:text-[#00d2ff] transition-colors">{member.name}</h3>
-                <span className="text-[#00d2ff] font-mono text-[10px] tracking-widest uppercase bg-[#00d2ff]/10 px-3 md:px-4 py-1 md:py-1.5 rounded-full border border-[#00d2ff]/20">{member.role}</span>
+                {/* 🎯 FIX APPLIED HERE: w-max added */}
+                <span className="w-max text-[#00d2ff] font-mono text-[10px] tracking-widest uppercase bg-[#00d2ff]/10 px-3 md:px-4 py-1 md:py-1.5 rounded-full border border-[#00d2ff]/20">{member.role}</span>
               </div>
             </a>
           ))}
@@ -174,9 +176,11 @@ export default function TeamPage() {
                   {member.icon}
                 </div>
               </div>
-              <div className="flex flex-col sm:items-center">
+              {/* 🎯 FIX APPLIED HERE: items-start sm:items-center */}
+              <div className="flex flex-col items-start sm:items-center">
                 <h3 className="text-base md:text-xl font-bold text-white uppercase tracking-wide mb-2 sm:text-center group-hover:text-[#1a73e8] transition-colors">{member.name}</h3>
-                <span className="text-[#1a73e8] font-mono text-xs uppercase bg-[#1a73e8]/10 px-3 py-1 rounded-full border border-[#1a73e8]/20">{member.role}</span>
+                {/* 🎯 FIX APPLIED HERE: w-max added */}
+                <span className="w-max text-[#1a73e8] font-mono text-xs uppercase bg-[#1a73e8]/10 px-3 py-1 rounded-full border border-[#1a73e8]/20">{member.role}</span>
               </div>
             </a>
           ))}
