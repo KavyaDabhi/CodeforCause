@@ -59,9 +59,9 @@ export default function OperationsSection() {
       
       {/* Header */}
       <div className="max-w-7xl mx-auto px-4 md:px-6 mb-10 md:mb-12 text-center md:text-left">
-        <h1 className="text-2xl md:text-5xl font-black tracking-widest mb-4 uppercase text-[#00d2ff] drop-shadow-[0_0_15px_rgba(0,210,255,0.3)]">
-          [ CFC_OPERATIONS_REGISTRY ]
-        </h1>
+       <h1 className="text-xl sm:text-2xl md:text-5xl font-black tracking-[0.15em] sm:tracking-widest mb-4 uppercase text-[#00d2ff] drop-shadow-[0_0_15px_rgba(0,210,255,0.3)] leading-tight">
+  [ CFC_OPERATIONS_REGISTRY ]
+</h1>
         <p className="text-gray-400 text-sm">
           <span className="text-[#50fa7b] animate-pulse">●</span> Active Code For Cause network nodes.
         </p>

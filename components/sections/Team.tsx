@@ -184,7 +184,7 @@ export default function TeamPage() {
       {/* CORE OPERATIVES */}
       <div className="w-full max-w-6xl z-10 mb-14 md:mb-20 flex flex-col items-center animate-fadeUp">
         <h2 className="text-[#00d2ff] font-mono text-xs md:text-sm tracking-[0.3em] uppercase mb-6 md:mb-8 font-bold">
-          Core Operatives
+          Core Operators
         </h2>
  
         {loading ? (
@@ -219,7 +219,7 @@ export default function TeamPage() {
  
       {/* Back Button */}
       <div className="z-10 mt-8 md:mt-12">
-        <Link href="/" className="group flex items-center justify-center gap-2 px-6 py-3 bg-transparent text-gray-400 border border-gray-800 hover:border-white hover:text-white rounded-xl font-mono text-sm transition-all duration-300">
+        <Link href="/#Home" className="group flex items-center justify-center gap-2 px-6 py-3 bg-transparent text-gray-400 border border-gray-800 hover:border-white hover:text-white rounded-xl font-mono text-sm transition-all duration-300">
           <svg className="w-4 h-4 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
           RETURN_TO_ROOT
         </Link>

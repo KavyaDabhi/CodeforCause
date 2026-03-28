@@ -158,77 +158,78 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         </div>
  
         {/* Right: Session + Hamburger */}
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-          
-          {session?.user?.email === "23ec017@charusat.edu.in" && (
-            <div style={{
-              fontSize: '9px', color: '#50fa7b', border: '1px solid #50fa7b',
-              padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(80, 250, 123, 0.1)',
-            }}>
-              <span className="hidden sm:inline">SECURE_LINK: </span>ACTIVE
-            </div>
-          )}
- 
-          <span className="hidden lg:inline-block" style={{ color: '#50fa7b', fontSize: '11px', fontWeight: 'bold' }}>
-            {time || "BOOTING..."}
-          </span>
-          
-          {status === "authenticated" && session?.user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <img 
-                src={session.user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || 'U')}&background=0f111a&color=00d2ff&bold=true&length=2`} 
-                alt="User" 
-                style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid #50fa7b', objectFit: 'cover' }}
-              />
-              <button 
-                onClick={handleLogout}
-                style={{
-                  border: '1px solid #ff5555', color: '#ff5555', padding: '4px 8px', 
-                  borderRadius: '4px', fontSize: '10px', fontWeight: 'bold',
-                  cursor: 'pointer', fontFamily: 'monospace', backgroundColor: 'transparent'
-                }} 
-              >
-                <span className="hidden sm:inline">[ EXIT ]</span>
-                <span className="sm:hidden">EXIT</span>
-              </button>
-            </div>
-          ) : (
-            <Link href="/login" style={{ textDecoration: 'none' }}>
-              <div style={{ 
-                border: '1px solid #50fa7b', color: '#50fa7b', padding: '4px 10px', 
-                borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', fontFamily: 'monospace',
-                backgroundColor: 'rgba(80, 250, 123, 0.05)'
-              }}>
-                [ ROOT_LOGIN ]
-              </div>
-            </Link>
-          )}
- 
-          {/* Hamburger (mobile only) */}
-          <button
-            onClick={() => setMenuOpen(prev => !prev)}
-            className="md:hidden"
-            aria-label="Toggle menu"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', flexDirection: 'column', gap: '5px' }}
-          >
-            <span style={{
-              display: 'block', width: '20px', height: '2px', backgroundColor: '#00d2ff',
-              transition: 'all 0.3s',
-              transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none',
-            }} />
-            <span style={{
-              display: 'block', width: '20px', height: '2px', backgroundColor: '#00d2ff',
-              transition: 'all 0.3s',
-              opacity: menuOpen ? 0 : 1,
-            }} />
-            <span style={{
-              display: 'block', width: '20px', height: '2px', backgroundColor: '#00d2ff',
-              transition: 'all 0.3s',
-              transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none',
-            }} />
-          </button>
- 
-        </div>
+<div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+  
+  {session?.user?.email === "23ec017@charusat.edu.in" && (
+    <div style={{
+      fontSize: '9px', color: '#50fa7b', border: '1px solid #50fa7b',
+      padding: '2px 6px', borderRadius: '4px', backgroundColor: 'rgba(80, 250, 123, 0.1)',
+    }}>
+      <span className="hidden sm:inline">SECURE_LINK: </span>ACTIVE
+    </div>
+  )}
+
+  <span className="hidden lg:inline-block" style={{ color: '#50fa7b', fontSize: '11px', fontWeight: 'bold' }}>
+    {time || "BOOTING..."}
+  </span>
+  
+  {status === "authenticated" && session?.user ? (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <img 
+        src={session.user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(session.user.name || 'U')}&background=0f111a&color=00d2ff&bold=true&length=2`} 
+        alt="User" 
+        style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid #50fa7b', objectFit: 'cover' }}
+      />
+      <button 
+        onClick={handleLogout}
+        style={{
+          border: '1px solid #ff5555', color: '#ff5555', padding: '4px 8px', 
+          borderRadius: '4px', fontSize: '10px', fontWeight: 'bold',
+          cursor: 'pointer', fontFamily: 'monospace', backgroundColor: 'transparent'
+        }} 
+      >
+        <span className="hidden sm:inline">[ EXIT ]</span>
+        <span className="sm:hidden">EXIT</span>
+      </button>
+    </div>
+  ) : (
+    <Link href="/login" style={{ textDecoration: 'none' }}>
+      <div style={{ 
+        border: '1px solid #50fa7b', color: '#50fa7b', padding: '4px 10px', 
+        borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', fontFamily: 'monospace',
+        backgroundColor: 'rgba(80, 250, 123, 0.05)'
+      }}>
+        [ ROOT_LOGIN ]
+      </div>
+    </Link>
+  )}
+
+  {/* Hamburger (mobile only) - FIXED DISPLAY CLASH */}
+  <button
+    onClick={() => setMenuOpen(prev => !prev)}
+    // md:hidden now works because display:flex was moved from inline style to here
+    className="flex md:hidden flex-col gap-[5px] p-1 border-none bg-none cursor-pointer"
+    aria-label="Toggle menu"
+    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+  >
+    <span style={{
+      display: 'block', width: '20px', height: '2px', backgroundColor: '#00d2ff',
+      transition: 'all 0.3s',
+      transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none',
+    }} />
+    <span style={{
+      display: 'block', width: '20px', height: '2px', backgroundColor: '#00d2ff',
+      transition: 'all 0.3s',
+      opacity: menuOpen ? 0 : 1,
+    }} />
+    <span style={{
+      display: 'block', width: '20px', height: '2px', backgroundColor: '#00d2ff',
+      transition: 'all 0.3s',
+      transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none',
+    }} />
+  </button>
+
+</div>
       </nav>
  
       {/* Mobile Dropdown Menu */}

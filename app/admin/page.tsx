@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { auth, db } from "@/lib/firebase"; // Ensure 'auth' is exported from your firebase config
+import { auth, db } from "@/lib/firebase"; 
 import { GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import { collection, addDoc, deleteDoc, doc, serverTimestamp, onSnapshot, query, orderBy } from "firebase/firestore";
 
@@ -27,7 +27,6 @@ const cyberStyles = `
 `;
 
 export default function AdminDashboard() {
-  // 🛡️ NATIVE FIREBASE AUTH STATE
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
@@ -63,16 +62,12 @@ export default function AdminDashboard() {
     name: "", role: "", section: "Student", linkedin: "", hierarchy: 1
   });
 
-  // Fetch data ONLY if the user is authenticated
   useEffect(() => {
     if (!user) return; 
-
     const qEvents = query(collection(db, "events"), orderBy("timestamp", "desc"));
     const unsubEvents = onSnapshot(qEvents, (s) => setEvents(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-    
     const qTeam = query(collection(db, "team"), orderBy("hierarchy", "asc"));
     const unsubTeam = onSnapshot(qTeam, (s) => setTeamMembers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-
     return () => { unsubEvents(); unsubTeam(); };
   }, [user]);
 
@@ -92,7 +87,6 @@ export default function AdminDashboard() {
     try {
       const posterUrl = await uploadToCloudinary(file);
       const autoCountdownTarget = `${newEvent.date}T${newEvent.startTime || "00:00"}`;
-
       await addDoc(collection(db, "events"), {
         ...newEvent,
         countdownTarget: autoCountdownTarget,
@@ -102,10 +96,7 @@ export default function AdminDashboard() {
       });
       alert("MISSION_DEPLOYED_SUCCESSFULLY");
       closeModal();
-    } catch (err) { 
-      alert("PERMISSION_DENIED: Check Firestore Rules"); 
-      console.error(err);
-    }
+    } catch (err) { alert("PERMISSION_DENIED"); console.error(err); }
     setLoading(false);
   };
 
@@ -122,10 +113,7 @@ export default function AdminDashboard() {
       });
       alert("OPERATIVE_REGISTERED");
       closeModal();
-    } catch (err) { 
-      alert("PERMISSION_DENIED: Check Firestore Rules"); 
-      console.error(err);
-    }
+    } catch (err) { alert("PERMISSION_DENIED"); console.error(err); }
     setLoading(false);
   };
 
@@ -137,60 +125,49 @@ export default function AdminDashboard() {
     setNewMember({ name: "", role: "", section: "Student", linkedin: "", hierarchy: 1 });
   };
 
-  // 🔒 TERMINAL LOGIN SCREEN FOR UNAUTHENTICATED USERS
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-[#05060a] text-[#00d2ff] flex items-center justify-center font-mono tracking-widest text-xs uppercase animate-pulse">
-        Initializing_Terminal_Access...
-      </div>
-    );
-  }
+  if (authLoading) return <div className="min-h-screen bg-[#05060a] text-[#00d2ff] flex items-center justify-center font-mono text-xs uppercase animate-pulse tracking-widest">Initializing_Terminal...</div>;
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#05060a] flex flex-col items-center justify-center font-mono text-white selection:bg-[#50fa7b] selection:text-black px-4">
-        <div className="border-l-4 border-[#00d2ff] pl-4 md:pl-6 mb-8 max-w-md w-full">
+      <div className="min-h-screen bg-[#05060a] flex flex-col items-center justify-center font-mono text-white px-4">
+        <div className="border-l-4 border-[#00d2ff] pl-4 mb-8 max-w-md w-full">
           <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tighter">System <span className="text-[#00d2ff]">Locked</span></h1>
-          <p className="text-gray-500 mt-2 text-[10px] md:text-xs tracking-widest uppercase">Awaiting valid credentials</p>
+          <p className="text-gray-500 mt-2 text-[10px] tracking-widest uppercase">Awaiting valid credentials</p>
         </div>
-        <button onClick={handleLogin} className="w-full max-w-md p-4 md:p-5 border border-[#50fa7b]/30 bg-[#0B111A] text-[#50fa7b] hover:border-[#50fa7b] hover:bg-white hover:text-black transition-all rounded-2xl font-bold tracking-[0.2em] uppercase text-[10px] md:text-xs text-center">
+        <button onClick={handleLogin} className="w-full max-w-md p-4 border border-[#50fa7b]/30 bg-[#0B111A] text-[#50fa7b] hover:bg-white hover:text-black transition-all rounded-2xl font-bold uppercase text-xs">
           Initialize Auth Protocol →
         </button>
       </div>
     );
   }
 
-  // 🟢 MAIN DASHBOARD FOR AUTHENTICATED USERS
   return (
     <main className="min-h-screen bg-[#05060a] pt-16 md:pt-24 px-4 md:px-8 font-mono text-white selection:bg-[#50fa7b] selection:text-black">
       <style>{cyberStyles}</style>
-      
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-start border-l-4 border-[#50fa7b] pl-4 md:pl-6 mb-8 md:mb-12 font-mono">
           <div>
             <h1 className="text-2xl md:text-4xl font-black uppercase tracking-tighter">Terminal <span className="text-[#50fa7b]">Admin</span></h1>
-            <p className="text-gray-500 mt-2 text-[10px] md:text-xs tracking-widest uppercase break-all">ID: {user.email} | ACCESS: GRANTED</p>
+            <p className="text-gray-500 mt-2 text-[10px] md:text-xs tracking-widest uppercase break-all font-bold">ID: {user.email}</p>
           </div>
-          <button onClick={() => signOut(auth)} className="text-[10px] text-[#ff5555] border border-[#ff5555]/30 p-2 rounded-lg hover:bg-[#ff5555] hover:text-black transition-all uppercase tracking-widest font-bold">
-            Logout
-          </button>
+          <button onClick={() => signOut(auth)} className="text-[10px] text-[#ff5555] border border-[#ff5555]/30 p-2 rounded-lg hover:bg-[#ff5555] hover:text-black transition-all uppercase font-bold">Logout</button>
         </div>
 
+        {/* Stats Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8 mb-10 md:mb-16">
           <div className="lg:col-span-2 grid grid-cols-2 gap-3 md:gap-4">
-            <button onClick={() => setActiveModal("EVENT")} className="p-5 md:p-8 bg-[#0B111A] border border-[#00d2ff]/30 rounded-2xl md:rounded-3xl hover:border-[#00d2ff] transition-all text-left group">
-              <div className="text-[#00d2ff] mb-2 text-lg md:text-2xl font-bold uppercase tracking-tighter">Deploy Event</div>
-              <p className="text-gray-500 text-[9px] md:text-[10px] uppercase tracking-widest font-mono">Upload Missions & Links</p>
+            <button onClick={() => setActiveModal("EVENT")} className="p-5 md:p-8 bg-[#0B111A] border border-[#00d2ff]/30 rounded-2xl md:rounded-3xl hover:border-[#00d2ff] transition-all text-left">
+              <div className="text-[#00d2ff] mb-2 text-lg md:text-2xl font-bold uppercase">Deploy Event</div>
+              <p className="text-gray-500 text-[9px] uppercase tracking-widest">Upload Missions</p>
             </button>
-            <button onClick={() => setActiveModal("MEMBER")} className="p-5 md:p-8 bg-[#0B111A] border border-[#50fa7b]/30 rounded-2xl md:rounded-3xl hover:border-[#50fa7b] transition-all text-left group">
-              <div className="text-[#50fa7b] mb-2 text-lg md:text-2xl font-bold uppercase tracking-tighter">Recruit Member</div>
-              <p className="text-gray-500 text-[9px] md:text-[10px] uppercase tracking-widest font-mono">Register Personnel</p>
+            <button onClick={() => setActiveModal("MEMBER")} className="p-5 md:p-8 bg-[#0B111A] border border-[#50fa7b]/30 rounded-2xl md:rounded-3xl hover:border-[#50fa7b] transition-all text-left">
+              <div className="text-[#50fa7b] mb-2 text-lg md:text-2xl font-bold uppercase">Recruit Member</div>
+              <p className="text-gray-500 text-[9px] uppercase tracking-widest">Register Personnel</p>
             </button>
           </div>
-          <div className="bg-[#0B111A] border border-white/5 rounded-2xl md:rounded-3xl p-5 md:p-8 flex flex-row lg:flex-col justify-around lg:justify-center gap-4">
-            <div className="flex justify-between items-center gap-4"><span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest font-mono">Nodes</span><span className="text-xl text-[#00d2ff] font-black">{events.length}</span></div>
-            <div className="hidden lg:block h-px bg-white/5" />
-            <div className="flex justify-between items-center gap-4"><span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest font-mono">Operatives</span><span className="text-xl text-[#50fa7b] font-black">{teamMembers.length}</span></div>
+          <div className="bg-[#0B111A] border border-white/5 rounded-2xl p-5 md:p-8 flex flex-row lg:flex-col justify-around lg:justify-center gap-4">
+            <div className="flex justify-between items-center gap-4"><span className="text-[10px] text-gray-500 font-bold uppercase">Nodes</span><span className="text-xl text-[#00d2ff] font-black">{events.length}</span></div>
+            <div className="flex justify-between items-center gap-4"><span className="text-[10px] text-gray-500 font-bold uppercase">Operatives</span><span className="text-xl text-[#50fa7b] font-black">{teamMembers.length}</span></div>
           </div>
         </div>
 
@@ -203,17 +180,19 @@ export default function AdminDashboard() {
       {activeModal && (
         <div className="fixed inset-0 z-[10000] flex items-start md:items-center justify-center bg-black/95 backdrop-blur-md p-3 md:p-4 overflow-y-auto">
           <div className={`bg-[#0B111A] border w-full max-w-2xl rounded-2xl md:rounded-3xl p-5 md:p-8 my-4 md:my-auto shadow-[0_0_80px_rgba(0,210,255,0.1)] ${activeModal === 'EVENT' ? 'border-[#00d2ff]/40' : 'border-[#50fa7b]/40'}`}>
-            <div className="flex justify-between items-center mb-6 md:mb-8">
-              <h2 className="font-black tracking-[0.2em] md:tracking-[0.3em] text-[10px] md:text-xs uppercase font-mono" style={{ color: activeModal === 'EVENT' ? '#00d2ff' : '#50fa7b' }}>[ {activeModal === 'EVENT' ? 'INIT_MISSION_DEPLOYMENT' : 'INIT_PERSONNEL_RECRUITMENT'} ]</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="font-black tracking-[0.2em] text-[10px] md:text-xs uppercase" style={{ color: activeModal === 'EVENT' ? '#00d2ff' : '#50fa7b' }}>
+                [ {activeModal === 'EVENT' ? 'INIT_MISSION_DEPLOYMENT' : 'INIT_PERSONNEL_RECRUITMENT'} ]
+              </h2>
               <button onClick={closeModal} className="text-gray-500 hover:text-white text-lg">✕</button>
             </div>
 
-            <form onSubmit={activeModal === 'EVENT' ? handleEventDeploy : handleMemberDeploy} className="space-y-4 md:space-y-6">
+            <form onSubmit={activeModal === 'EVENT' ? handleEventDeploy : handleMemberDeploy} className="space-y-4">
               <div className="relative group border-2 border-dashed border-white/10 rounded-2xl p-2 text-center bg-black/40">
                 {previewUrl ? (
                   <img src={previewUrl} className={`w-full max-h-40 object-contain rounded-xl ${activeModal === 'MEMBER' ? 'h-24 w-24 md:h-32 md:w-32 mx-auto rounded-full object-cover' : ''}`} />
                 ) : (
-                  <div className="py-8 md:py-12 text-[10px] text-gray-500 uppercase font-bold tracking-widest underline underline-offset-4 font-mono">Upload_Visual_Asset</div>
+                  <div className="py-8 md:py-12 text-[10px] text-gray-500 uppercase font-bold tracking-widest underline underline-offset-4">Upload_Visual_Asset</div>
                 )}
                 <input type="file" required accept="image/*" onChange={(e)=>{
                   const f = e.target.files?.[0];
@@ -223,43 +202,69 @@ export default function AdminDashboard() {
 
               {activeModal === 'EVENT' && (
                 <div className="space-y-3 md:space-y-4 font-mono">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                    <input required placeholder="TITLE" className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff] w-full" onChange={(e)=>setNewEvent({...newEvent, title: e.target.value})} />
-                    <select className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff] w-full" onChange={(e)=>setNewEvent({...newEvent, category: e.target.value})}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <input required placeholder="TITLE" className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff] w-full transition-all" onChange={(e)=>setNewEvent({...newEvent, title: e.target.value})} />
+                    <select className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff] w-full cursor-pointer" onChange={(e)=>setNewEvent({...newEvent, category: e.target.value})}>
                       <option value="Workshop">Workshop</option><option value="Hackathon">Hackathon</option><option value="Seminar">Seminar</option><option value="Coding">Coding</option>
                     </select>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <div className="space-y-1"><label className="text-[9px] text-[#00d2ff] uppercase ml-2 font-bold tracking-widest">Event_Date</label>
-                    <input type="date" required className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none" onChange={(e)=>setNewEvent({...newEvent, date: e.target.value})} /></div>
-                    <div className="space-y-1"><label className="text-[9px] text-gray-500 uppercase ml-2 tracking-widest">Start_Time</label>
-                    <input type="time" className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none" onChange={(e)=>setNewEvent({...newEvent, startTime: e.target.value})} /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1"><label className="text-[9px] text-[#00d2ff] uppercase ml-2 font-bold tracking-widest">Date</label>
+                    <input type="date" required className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-xs outline-none" onChange={(e)=>setNewEvent({...newEvent, date: e.target.value})} /></div>
+                    <div className="space-y-1"><label className="text-[9px] text-gray-500 uppercase ml-2 tracking-widest">Time</label>
+                    <input type="time" className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-xs outline-none" onChange={(e)=>setNewEvent({...newEvent, startTime: e.target.value})} /></div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                    <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00d2ff] text-[10px] font-bold">LINK:</span><input required placeholder="G-FORM_URL" className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 pl-14 text-xs outline-none focus:border-[#00d2ff]" onChange={(e)=>setNewEvent({...newEvent, regLink: e.target.value})} /></div>
-                    <input placeholder="VENUE_LOCATION" className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff]" onChange={(e)=>setNewEvent({...newEvent, venue: e.target.value})} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00d2ff] text-[10px] font-black pointer-events-none z-10">LINK:</span>
+                      <input 
+                        required 
+                        placeholder="G-FORM_URL" 
+                        style={{ paddingLeft: "85px" }}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff] transition-all" 
+                        onChange={(e)=>setNewEvent({...newEvent, regLink: e.target.value})} 
+                      />
+                    </div>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00d2ff] text-[10px] font-black pointer-events-none z-10">LOC:</span>
+                      <input 
+                        placeholder="VENUE_LOCATION" 
+                        style={{ paddingLeft: "70px" }}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff] transition-all" 
+                        onChange={(e)=>setNewEvent({...newEvent, venue: e.target.value})} 
+                      />
+                    </div>
                   </div>
-                  <textarea required rows={2} placeholder="MISSION_DESCRIPTION..." className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff]" onChange={(e)=>setNewEvent({...newEvent, description: e.target.value})} />
+                  <textarea required rows={2} placeholder="MISSION_DESCRIPTION..." className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff] transition-all" onChange={(e)=>setNewEvent({...newEvent, description: e.target.value})} />
                 </div>
               )}
 
               {activeModal === 'MEMBER' && (
                 <div className="space-y-3 md:space-y-4 font-mono">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                    <input required placeholder="FULL_NAME" className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] w-full" onChange={(e)=>setNewMember({...newMember, name: e.target.value})} />
-                    <input required placeholder="ROLE (e.g. Lead)" className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] w-full" onChange={(e)=>setNewMember({...newMember, role: e.target.value})} />
+                    <input required placeholder="FULL_NAME" className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] w-full transition-all" onChange={(e)=>setNewMember({...newMember, name: e.target.value})} />
+                    <input required placeholder="ROLE (e.g. Lead)" className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] w-full transition-all" onChange={(e)=>setNewMember({...newMember, role: e.target.value})} />
                   </div>
                   <div className="grid grid-cols-2 gap-3 md:gap-4">
-                    <select className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] uppercase font-bold w-full" onChange={(e)=>setNewMember({...newMember, section: e.target.value})}>
+                    <select className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] uppercase font-bold w-full cursor-pointer" onChange={(e)=>setNewMember({...newMember, section: e.target.value})}>
                       <option value="Student">Student</option><option value="Faculty">Faculty</option><option value="Leadership">Leadership</option>
                     </select>
-                    <input type="number" placeholder="RANK (1=TOP)" className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] w-full" onChange={(e)=>setNewMember({...newMember, hierarchy: parseInt(e.target.value)})} />
+                    <input type="number" placeholder="RANK (1=TOP)" className="bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] w-full transition-all" onChange={(e)=>setNewMember({...newMember, hierarchy: parseInt(e.target.value)})} />
                   </div>
-                  <div className="relative"><span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#50fa7b] text-[10px] font-bold">LI:</span><input required placeholder="LINKEDIN_URL" className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 pl-12 text-xs outline-none focus:border-[#50fa7b]" onChange={(e)=>setNewMember({...newMember, linkedin: e.target.value})} /></div>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#50fa7b] text-[10px] font-black tracking-widest pointer-events-none z-10">LI:</span>
+                    <input 
+                      required 
+                      placeholder="LINKEDIN_URL" 
+                      style={{ paddingLeft: "85px" }}
+                      className="w-full bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#50fa7b] transition-all" 
+                      onChange={(e)=>setNewMember({...newMember, linkedin: e.target.value})} 
+                    />
+                  </div>
                 </div>
               )}
 
-              <button type="submit" disabled={loading} className={`w-full text-black font-black p-4 md:p-5 rounded-2xl uppercase tracking-[0.2em] md:tracking-[0.3em] transition-all hover:bg-white active:scale-95 disabled:opacity-50 font-mono text-xs md:text-sm ${activeModal === 'EVENT' ? 'bg-[#00d2ff]' : 'bg-[#50fa7b]'}`}>
+              <button type="submit" disabled={loading} className={`w-full text-black font-black p-4 rounded-2xl uppercase tracking-[0.2em] transition-all hover:bg-white active:scale-95 disabled:opacity-50 text-xs md:text-sm ${activeModal === 'EVENT' ? 'bg-[#00d2ff]' : 'bg-[#50fa7b]'}`}>
                 {loading ? "COMMITTING..." : "EXECUTE_DEPLOYMENT →"}
               </button>
             </form>
