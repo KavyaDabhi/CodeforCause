@@ -14,37 +14,34 @@ declare module "next-auth" {
 }
 
 const handler = NextAuth({
-  // Link to your Firebase Firestore
- // adapter: FirestoreAdapter(db as any), 
+  // 🎯 RE-ENABLED: Link to your Firebase Firestore
+  adapter: FirestoreAdapter(db as any), 
 
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // Allows linking Google to an existing email/password account if emails match
       allowDangerousEmailAccountLinking: true, 
     }),
 
-  CredentialsProvider({
-  name: "Credentials",
-  credentials: {
-    email: { label: "Email", type: "text" },
-    password: { label: "Password", type: "password" }
-  },
-  async authorize(credentials) {
-  if (credentials?.email) {
-    // 🎯 We pass the email as the 'name' so the frontend can use it for initials
-    return { 
-      id: credentials.email, 
-      email: credentials.email, 
-      name: credentials.email.split('@')[0] // Takes '23ec017' from the email
-    };
-  }
-  return null;
-}
-}),
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "text" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (credentials?.email) {
+          return { 
+            id: credentials.email, 
+            email: credentials.email, 
+            name: credentials.email.split('@')[0] 
+          };
+        }
+        return null;
+      }
+    }),
   ],
-
 
   session: {
     strategy: "jwt",
@@ -54,49 +51,45 @@ const handler = NextAuth({
 
   callbacks: {
     async signIn({ user, account }) {
-  if (account?.provider === "google") {
-    const email = user.email?.toLowerCase().trim();
-    console.log("LOGIN_ATTEMPT_FROM:", email); // This will show in Vercel Logs
+      if (account?.provider === "google") {
+        const email = user.email?.toLowerCase().trim();
+        console.log("LOGIN_ATTEMPT_FROM:", email);
 
-    if (email && email.endsWith("@charusat.edu.in")) {
+        if (email && email.endsWith("@charusat.edu.in")) {
+          return true;
+        }
+        return false; 
+      }
       return true;
-    }
-    return false; // Rejects anyone else
-  }
-  return true;
-},
+    },
     
-  async jwt({ token, user }) {
-    if (user) {
-      token.email = user.email;
-      token.id = user.id;
-      token.picture = user.image; // 🎯 Make sure the picture is captured
-    }
-    return token;
-  },
+    async jwt({ token, user }) {
+      if (user) {
+        token.email = user.email;
+        token.id = user.id;
+        token.picture = user.image;
+        token.name = user.name; // 🎯 ADDED: Captures name for initials logic
+      }
+      return token;
+    },
 
-  async session({ session, token }) {
-  if (session.user) {
-    session.user.email = token.email as string;
-    session.user.id = token.id as string;
-    session.user.image = token.picture as string;
-    session.user.name = token.name as string; // 🎯 Crucial for the initials
-  }
-  return session;
-},
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.email = token.email as string;
+        session.user.id = token.id as string;
+        session.user.image = token.picture as string;
+        session.user.name = token.name as string; 
+      }
+      return session;
+    },
 
     async redirect({ url, baseUrl }) {
-      // 🎯 FORCE the redirect to the main domain to break the loop
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allow redirects to the same origin
       else if (new URL(url).origin === baseUrl) return url;
       return baseUrl;
     },
   },
-  // 🎯 Add this to debug in Vercel Logs
   debug: true,
 });
-
-
 
 export { handler as GET, handler as POST };
