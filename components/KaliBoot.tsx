@@ -28,9 +28,29 @@ export default function KaliBoot({ onComplete }: { onComplete: () => void }) {
   const [phase, setPhase] = useState<'software' | 'hardware'>('software');
   const [progress, setProgress] = useState(0);
   const [mounted, setMounted] = useState(false);
-  
+  const [isActive, setIsActive] = useState(false); // 🎯 Added this to control if it plays
+
+  // 🎯 1. THE CACHE MEMORY CHECK
   useEffect(() => {
     setMounted(true);
+    
+    // Check the browser's local storage
+    const hasBootedBefore = localStorage.getItem("cfc_global_boot_played");
+    
+    if (hasBootedBefore) {
+      // They have been to the site before -> Instantly skip
+      onComplete();
+    } else {
+      // First time visitor -> Save to memory and start the animation
+      localStorage.setItem("cfc_global_boot_played", "true");
+      setIsActive(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 🎯 2. THE ANIMATION LOGIC (Only runs if active)
+  useEffect(() => {
+    if (!isActive) return;
 
     if (phase === 'software') {
       let i = 0;
@@ -73,10 +93,12 @@ export default function KaliBoot({ onComplete }: { onComplete: () => void }) {
       }, 400);
       return () => clearInterval(interval);
     }
-  }, [phase, onComplete]);
+  }, [phase, onComplete, isActive]);
 
-  // Safety Bypass
+  // 🎯 3. SAFETY BYPASS (Only listens if active)
   useEffect(() => {
+    if (!isActive) return;
+
     const handleBypass = () => onComplete();
     window.addEventListener('keydown', handleBypass);
     window.addEventListener('click', handleBypass);
@@ -84,9 +106,10 @@ export default function KaliBoot({ onComplete }: { onComplete: () => void }) {
       window.removeEventListener('keydown', handleBypass);
       window.removeEventListener('click', handleBypass);
     };
-  }, [onComplete]);
+  }, [onComplete, isActive]);
 
-  if (!mounted) return null;
+  // If we are skipping, do not render the black screen at all
+  if (!mounted || !isActive) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-[99999] bg-[#0a0b10] text-[#00d2ff] font-mono p-6 md:p-12 flex flex-col justify-center items-center overflow-hidden">

@@ -4,8 +4,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { auth, db } from "@/lib/firebase"; 
 import { signOut as firebaseSignOut } from "firebase/auth";
-import { useSession, signOut as nextAuthSignOut } from "next-auth/react"; // 🚀 Added useSession
-import { collection, addDoc, deleteDoc, doc, serverTimestamp, onSnapshot, query, orderBy } from "firebase/firestore";
+import { useSession, signOut as nextAuthSignOut } from "next-auth/react"; 
+// 🚀 ADDED updateDoc
+import { collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, onSnapshot, query, orderBy } from "firebase/firestore";
 
 const cyberStyles = `
   input[type="date"]::-webkit-calendar-picker-indicator,
@@ -27,7 +28,6 @@ const cyberStyles = `
 `;
 
 export default function AdminDashboard() {
-  // 🚀 PULLING DATA FROM NEXTAUTH INSTEAD OF FIREBASE
   const { data: session } = useSession(); 
 
   const adminInputClass = "bg-black/60 border border-white/10 rounded-xl p-3 md:p-4 text-xs outline-none focus:border-[#00d2ff] w-full transition-all text-white font-mono";
@@ -40,12 +40,16 @@ export default function AdminDashboard() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [avatarError, setAvatarError] = useState(false);
   
+  // 🚀 NEW: Track what we are editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
   const [newEvent, setNewEvent] = useState({
     title: "", date: "", startTime: "", venue: "", regLink: "", category: "Workshop", description: ""
   });
 
+  // 🚀 ADDED: collegeId
   const [newMember, setNewMember] = useState({
-    name: "", role: "", section: "Student", linkedin: "", hierarchy: 1
+    name: "", role: "", section: "Student", linkedin: "", hierarchy: 1, collegeId: ""
   });
 
   useEffect(() => {
@@ -75,19 +79,25 @@ export default function AdminDashboard() {
 
   const handleEventDeploy = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return alert("MISSING_POSTER");
+    if (!file && !editingId) return alert("MISSING_POSTER");
     setLoading(true);
     try {
-      const posterUrl = await uploadToCloudinary(file);
+      let posterUrl = previewUrl; 
+      if (file) posterUrl = await uploadToCloudinary(file);
+
       const autoCountdownTarget = `${newEvent.date}T${newEvent.startTime || "00:00"}`;
-      await addDoc(collection(db, "events"), {
-        ...newEvent,
-        countdownTarget: autoCountdownTarget,
-        posterUrl,
-        category: newEvent.category.toLowerCase(),
-        timestamp: serverTimestamp()
-      });
-      alert("MISSION_SUCCESS");
+      
+      if (editingId) {
+        await updateDoc(doc(db, "events", editingId), {
+          ...newEvent, countdownTarget: autoCountdownTarget, posterUrl, category: newEvent.category.toLowerCase()
+        });
+        alert("MISSION_UPDATED");
+      } else {
+        await addDoc(collection(db, "events"), {
+          ...newEvent, countdownTarget: autoCountdownTarget, posterUrl, category: newEvent.category.toLowerCase(), timestamp: serverTimestamp()
+        });
+        alert("MISSION_SUCCESS");
+      }
       closeModal();
     } catch (err) { console.error(err); }
     setLoading(false);
@@ -95,30 +105,50 @@ export default function AdminDashboard() {
 
   const handleMemberDeploy = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return alert("MISSING_PHOTO");
+    if (!file && !editingId) return alert("MISSING_PHOTO");
     setLoading(true);
     try {
-      const photoUrl = await uploadToCloudinary(file);
-      await addDoc(collection(db, "team"), {
-        ...newMember,
-        image: photoUrl,
-        timestamp: serverTimestamp()
-      });
-      alert("MEMBER_RECRUITED");
+      let photoUrl = previewUrl;
+      if (file) photoUrl = await uploadToCloudinary(file);
+
+      if (editingId) {
+        await updateDoc(doc(db, "team", editingId), {
+          ...newMember, image: photoUrl
+        });
+        alert("OPERATIVE_UPDATED");
+      } else {
+        await addDoc(collection(db, "team"), {
+          ...newMember, image: photoUrl, timestamp: serverTimestamp()
+        });
+        alert("MEMBER_RECRUITED");
+      }
       closeModal();
     } catch (err) { console.error(err); }
     setLoading(false);
+  };
+
+  // 🚀 NEW: Open Edit Modal with Data
+  const openEditModal = (item: any, type: "EVENT" | "MEMBER") => {
+    setEditingId(item.id);
+    setActiveModal(type);
+    if (type === "EVENT") {
+      setNewEvent({ title: item.title, date: item.date, startTime: item.startTime, venue: item.venue, regLink: item.regLink, category: item.category, description: item.description });
+      setPreviewUrl(item.posterUrl);
+    } else {
+      setNewMember({ name: item.name, role: item.role, section: item.section, linkedin: item.linkedin, hierarchy: item.hierarchy, collegeId: item.collegeId || "" });
+      setPreviewUrl(item.image);
+    }
   };
 
   const closeModal = () => {
     setActiveModal(null);
     setFile(null);
     setPreviewUrl(null);
+    setEditingId(null);
     setNewEvent({ title: "", date: "", startTime: "", venue: "", regLink: "", category: "Workshop", description: "" });
-    setNewMember({ name: "", role: "", section: "Student", linkedin: "", hierarchy: 1 });
+    setNewMember({ name: "", role: "", section: "Student", linkedin: "", hierarchy: 1, collegeId: "" });
   };
 
-  // 🚀 THE FIX: Use NextAuth's session.user instead of Firebase currentUser
   const emailPrefix = session?.user?.email?.split("@")[0] || "ADMIN";
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(emailPrefix)}&background=0f111a&color=00d2ff&bold=true&size=64`;
   const avatarSrc = (!avatarError && session?.user?.image) ? session.user.image : fallbackAvatar;
@@ -197,15 +227,15 @@ export default function AdminDashboard() {
                 <span className="text-xl text-[#00d2ff] font-black">{events.length}</span>
               </div>
               <div className="flex justify-between items-center gap-4">
-                <span className="text-[10px] text-gray-500 font-bold uppercase">Operatives</span>
+                <span className="text-[10px] text-gray-500 font-bold uppercase">Operators</span>
                 <span className="text-xl text-[#50fa7b] font-black">{teamMembers.length}</span>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-12 pb-12">
-            <RegistryList title="Mission_Registry" items={events} onDel={(id:string) => deleteDoc(doc(db,"events",id))} color="#00d2ff" type="event" />
-            <RegistryList title="Personnel_Registry" items={teamMembers} onDel={(id:string) => deleteDoc(doc(db,"team",id))} color="#50fa7b" type="member" />
+            <RegistryList title="Mission_Registry" items={events} onEdit={(item: any) => openEditModal(item, "EVENT")} onDel={(id:string) => deleteDoc(doc(db,"events",id))} color="#00d2ff" type="event" />
+            <RegistryList title="Personnel_Registry" items={teamMembers} onEdit={(item: any) => openEditModal(item, "MEMBER")} onDel={(id:string) => deleteDoc(doc(db,"team",id))} color="#50fa7b" type="member" />
           </div>
         </div>
 
@@ -214,7 +244,7 @@ export default function AdminDashboard() {
             <div className={`bg-[#0B111A] border w-full max-w-2xl rounded-2xl md:rounded-3xl p-5 md:p-8 my-4 md:my-auto shadow-2xl ${activeModal === 'EVENT' ? 'border-[#00d2ff]/40' : 'border-[#50fa7b]/40'}`}>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-black tracking-[0.2em] text-[10px] md:text-xs uppercase" style={{ color: activeModal === 'EVENT' ? '#00d2ff' : '#50fa7b' }}>
-                  [ {activeModal === 'EVENT' ? 'INIT_MISSION_DEPLOYMENT' : 'INIT_PERSONNEL_RECRUITMENT'} ]
+                  [ {editingId ? 'UPDATE_REGISTRY' : (activeModal === 'EVENT' ? 'INIT_MISSION_DEPLOYMENT' : 'INIT_PERSONNEL_RECRUITMENT')} ]
                 </h2>
                 <button onClick={closeModal} className="text-gray-500 hover:text-white text-lg">✕</button>
               </div>
@@ -226,17 +256,17 @@ export default function AdminDashboard() {
                   ) : (
                     <div className="py-8 md:py-12 text-[10px] text-gray-500 uppercase font-bold tracking-widest underline underline-offset-4">Upload_Visual_Asset</div>
                   )}
-                  <input type="file" required accept="image/*" onChange={(e)=>{
+                  <input type="file" required={!editingId} accept="image/*" onChange={(e)=>{
                     const f = e.target.files?.[0];
                     if(f) { setFile(f); setPreviewUrl(URL.createObjectURL(f)); }
                   }} className="absolute inset-0 opacity-0 cursor-pointer" />
                 </div>
 
-                {activeModal === 'EVENT' ? (
+                {activeModal === 'EVENT' && (
                   <div className="space-y-3 font-mono">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <input required placeholder="TITLE" className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, title: e.target.value})} />
-                      <select className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, category: e.target.value})}>
+                      <input required placeholder="TITLE" value={newEvent.title} className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, title: e.target.value})} />
+                      <select className={adminInputClass} value={newEvent.category} onChange={(e)=>setNewEvent({...newEvent, category: e.target.value})}>
                         <option value="Workshop">Workshop</option>
                         <option value="Hackathon">Hackathon</option>
                         <option value="Seminar">Seminar</option>
@@ -246,48 +276,54 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1">
                         <label className="text-[9px] text-[#00d2ff] uppercase ml-2 font-bold tracking-widest">Date</label>
-                        <input type="date" required className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, date: e.target.value})} />
+                        <input type="date" required value={newEvent.date} className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, date: e.target.value})} />
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] text-gray-500 uppercase ml-2 tracking-widest">Time</label>
-                        <input type="time" className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, startTime: e.target.value})} />
+                        <input type="time" value={newEvent.startTime} className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, startTime: e.target.value})} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00d2ff] text-[10px] font-black pointer-events-none z-10">LINK:</span>
-                        <input required placeholder="G-FORM_URL" style={{ paddingLeft: "85px" }} className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, regLink: e.target.value})} />
+                        <input required placeholder="G-FORM_URL" value={newEvent.regLink} style={{ paddingLeft: "85px" }} className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, regLink: e.target.value})} />
                       </div>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#00d2ff] text-[10px] font-black pointer-events-none z-10">LOC:</span>
-                        <input placeholder="VENUE_LOCATION" style={{ paddingLeft: "70px" }} className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, venue: e.target.value})} />
+                        <input placeholder="VENUE_LOCATION" value={newEvent.venue} style={{ paddingLeft: "70px" }} className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, venue: e.target.value})} />
                       </div>
                     </div>
-                    <textarea required rows={2} placeholder="MISSION_DESCRIPTION..." className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, description: e.target.value})} />
+                    <textarea required rows={2} placeholder="MISSION_DESCRIPTION..." value={newEvent.description} className={adminInputClass} onChange={(e)=>setNewEvent({...newEvent, description: e.target.value})} />
                   </div>
-                ) : (
+                )}
+
+                {activeModal === 'MEMBER' && (
                   <div className="space-y-3 font-mono">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <input required placeholder="FULL_NAME" className={adminInputClass} onChange={(e)=>setNewMember({...newMember, name: e.target.value})} />
-                      <input required placeholder="ROLE (e.g. Lead)" className={adminInputClass} onChange={(e)=>setNewMember({...newMember, role: e.target.value})} />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <input required placeholder="FULL_NAME" value={newMember.name} className={`${adminInputClass} md:col-span-2`} onChange={(e)=>setNewMember({...newMember, name: e.target.value})} />
+                      {/* 🚀 ADDED COLLEGE ID INPUT */}
+                      <input required placeholder="College ID" value={newMember.collegeId} className={adminInputClass} onChange={(e)=>setNewMember({...newMember, collegeId: e.target.value})} />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <select className={`${adminInputClass} font-bold cursor-pointer`} onChange={(e)=>setNewMember({...newMember, section: e.target.value})}>
+                      <input required placeholder="ROLE (e.g. Lead)" value={newMember.role} className={adminInputClass} onChange={(e)=>setNewMember({...newMember, role: e.target.value})} />
+                      <select className={`${adminInputClass} font-bold cursor-pointer`} value={newMember.section} onChange={(e)=>setNewMember({...newMember, section: e.target.value})}>
                         <option value="Student">Student</option>
                         <option value="Faculty">Faculty</option>
                         <option value="Leadership">Leadership</option>
                       </select>
-                      <input type="number" placeholder="RANK (1=TOP)" className={adminInputClass} onChange={(e)=>setNewMember({...newMember, hierarchy: parseInt(e.target.value)})} />
                     </div>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#50fa7b] text-[10px] font-black tracking-widest pointer-events-none z-10">LI:</span>
-                      <input required placeholder="LINKEDIN_URL" style={{ paddingLeft: "85px" }} className={adminInputClass} onChange={(e)=>setNewMember({...newMember, linkedin: e.target.value})} />
+                    <div className="grid grid-cols-3 gap-3">
+                      <input type="number" placeholder="RANK" value={newMember.hierarchy} className={adminInputClass} onChange={(e)=>setNewMember({...newMember, hierarchy: parseInt(e.target.value)})} />
+                      <div className="relative col-span-2">
+                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#50fa7b] text-[10px] font-black tracking-widest pointer-events-none z-10">LI:</span>
+                        <input required placeholder="LINKEDIN_URL" value={newMember.linkedin} style={{ paddingLeft: "85px" }} className={adminInputClass} onChange={(e)=>setNewMember({...newMember, linkedin: e.target.value})} />
+                      </div>
                     </div>
                   </div>
                 )}
 
                 <button type="submit" disabled={loading} className={`w-full text-black font-black p-4 rounded-2xl uppercase tracking-[0.2em] transition-all hover:bg-white active:scale-95 disabled:opacity-50 text-xs md:text-sm ${activeModal === 'EVENT' ? 'bg-[#00d2ff]' : 'bg-[#50fa7b]'}`}>
-                  {loading ? "COMMITTING..." : "EXECUTE_DEPLOYMENT →"}
+                  {loading ? "COMMITTING..." : (editingId ? "EXECUTE_UPDATE →" : "EXECUTE_DEPLOYMENT →")}
                 </button>
               </form>
             </div>
@@ -298,7 +334,8 @@ export default function AdminDashboard() {
   );
 }
 
-const RegistryList = ({ title, items, onDel, color, type }: any) => (
+// 🚀 REGISTRY LIST WITH EDIT BUTTON
+const RegistryList = ({ title, items, onDel, onEdit, color, type }: any) => (
   <div className="bg-[#0a0c10] border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-6 font-mono">
     <h3 className="text-xs font-bold uppercase tracking-[0.3em] mb-4 md:mb-6 flex items-center gap-2" style={{ color }}>
       <span className="w-2 h-2 rounded-full animate-pulse shrink-0" style={{ backgroundColor: color }} />
@@ -311,10 +348,14 @@ const RegistryList = ({ title, items, onDel, color, type }: any) => (
             <img src={type === 'event' ? item.posterUrl : item.image} className={`w-8 h-8 object-cover shrink-0 ${type === 'member' ? 'rounded-full' : 'rounded-md'}`} alt="Visual" />
             <div className="min-w-0">
               <h4 className="text-xs font-bold uppercase tracking-wider truncate">{type === 'event' ? item.title : item.name}</h4>
-              <p className="text-[9px] text-gray-500 uppercase">{type === 'event' ? item.category : item.section}</p>
+              {/* 🚀 Shows College ID in the list if available */}
+              <p className="text-[9px] text-gray-500 uppercase">{type === 'event' ? item.category : (item.collegeId || item.section)}</p>
             </div>
           </div>
-          <button onClick={() => confirm("TERMINATE_NODE?") && onDel(item.id)} className="text-[#ff5555] text-[10px] font-bold uppercase opacity-30 hover:opacity-100 transition-opacity shrink-0">Del</button>
+          <div className="flex gap-3 shrink-0">
+            <button onClick={() => onEdit(item)} style={{ color }} className="text-[10px] font-bold uppercase opacity-50 hover:opacity-100 transition-opacity">Edit</button>
+            <button onClick={() => confirm("TERMINATE_NODE?") && onDel(item.id)} className="text-[#ff5555] text-[10px] font-bold uppercase opacity-30 hover:opacity-100 transition-opacity">Del</button>
+          </div>
         </div>
       ))}
     </div>
