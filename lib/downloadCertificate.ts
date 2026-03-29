@@ -213,18 +213,55 @@ async function injectLinkFallback(fontFamily: string, fontSize: number): Promise
 // ─────────────────────────────────────────────────────────────────────────────
 // Image loader with CORS fallback
 // ─────────────────────────────────────────────────────────────────────────────
+// ── Mobile-Proof Font Loader ────────────────────────────
+async function forceFontLoad(fontFamily: string): Promise<void> {
+  const genericFonts = ["monospace", "sans-serif", "serif", "cursive"];
+  if (genericFonts.includes(fontFamily.toLowerCase())) return;
+
+  try {
+    const cssUrl = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(/\s+/g, '+')}&display=swap`;
+    // We add a timestamp to the fetch to prevent Mobile Safari from using a broken cached version
+    const response = await fetch(`${cssUrl}&t=${Date.now()}`); 
+    const css = await response.text();
+
+    const match = css.match(/url\((https:\/\/[^)]+)\)/);
+    if (!match) throw new Error("Font URL not found");
+    
+    const fontUrl = match[1].replace(/['"]/g, ''); 
+
+    const font = new FontFace(fontFamily, `url(${fontUrl})`);
+    const loadedFont = await font.load();
+    document.fonts.add(loadedFont);
+
+    // Mobile GPUs need a bit more time to "wake up" the font
+    await new Promise(r => setTimeout(r, 200));
+    
+  } catch (error) {
+    console.error("Mobile font load failed:", error);
+  }
+}
+
+// ── Mobile-Proof Image Loader ────────────────────────────
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    
+    // 🚀 THE MOBILE FIX: Force anonymous cross-origin BEFORE setting src
+    img.crossOrigin = "anonymous"; 
+    
     img.onload = () => resolve(img);
     img.onerror = () => {
+      // If it fails, try one more time without the cross-origin flag (fallback)
       const fallback = new Image();
       fallback.onload = () => resolve(fallback);
       fallback.onerror = reject;
       fallback.src = src;
     };
-    img.src = src;
+
+    // 🚀 THE CACHE FIX: Add a random string to the end of the URL 
+    // This trick prevents mobile browsers from loading a "cached" version of the image without CORS
+    const connector = src.includes('?') ? '&' : '?';
+    img.src = `${src}${connector}nocache=${Date.now()}`;
   });
 }
 
