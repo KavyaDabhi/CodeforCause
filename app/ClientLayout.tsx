@@ -196,17 +196,22 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
                     >
                       <img
-                        src={avatarSrc}
-                        alt="Profile"
-                        referrerPolicy="no-referrer"
-                        style={{
-                          width: "28px", height: "28px", borderRadius: "50%",
-                          border: dropdownOpen ? "2px solid #00d2ff" : "2px solid #50fa7b",
-                          objectFit: "cover",
-                          transition: "border-color 0.2s, box-shadow 0.2s",
-                          boxShadow: dropdownOpen ? "0 0 10px rgba(0,210,255,0.6)" : "none",
-                        }}
-                      />
+  src={session?.user?.image || avatarSrc} // 🚀 Prioritize Google image first
+  alt="Profile"
+  referrerPolicy="no-referrer"
+  onError={(e) => {
+    // 🚀 If Google blocks the image, instantly swap to the fallback
+    const emailPrefix = session?.user?.email?.substring(0, 2).toUpperCase() || "OP";
+    e.currentTarget.src = `https://ui-avatars.com/api/?name=${emailPrefix}&background=0B111A&color=50fa7b&bold=true`;
+  }}
+  style={{
+    width: "28px", height: "28px", borderRadius: "50%",
+    border: dropdownOpen ? "2px solid #00d2ff" : "2px solid #50fa7b",
+    objectFit: "cover",
+    transition: "border-color 0.2s, box-shadow 0.2s",
+    boxShadow: dropdownOpen ? "0 0 10px rgba(0,210,255,0.6)" : "none",
+  }}
+/>
                     </button>
 
                     {/* Dropdown panel */}
