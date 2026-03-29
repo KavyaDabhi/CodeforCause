@@ -3,9 +3,9 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { db } from "@/lib/firebase";
-// 🎯 Added getDocs to fetch the custom user name
-import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase"; 
+import { collection, query, where, onSnapshot, getDocs, doc, updateDoc } from "firebase/firestore";
+import { GoogleAuthProvider, linkWithPopup } from "firebase/auth";
 
 const cyberStyles = `
   .custom-scrollbar::-webkit-scrollbar { width: 4px; }
@@ -21,8 +21,9 @@ export default function UserDashboard() {
   const [myCertificates, setMyCertificates] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(true);
   
-  // 🎯 NEW STATE: To hold the name fetched from Firestore
+  // 🎯 Unified Identity States
   const [customName, setCustomName] = useState<string | null>(null);
+  const [firestorePhoto, setFirestorePhoto] = useState<string | null>(null);
 
   // Security & Redirect
   useEffect(() => {
@@ -31,48 +32,42 @@ export default function UserDashboard() {
     }
   }, [status]);
 
-  // 🎯 Fetch Custom Name from Firestore for Custom Logins
+  // 🎯 1. Fetch Identity (Name & Photo) from Firestore
   useEffect(() => {
-    const fetchCustomName = async () => {
-      // If they are logged in, but DON'T have a Google Image, it's a Custom Login!
-      if (session?.user?.email && !session?.user?.image) {
+    const fetchIdentity = async () => {
+      if (session?.user?.email) {
         try {
-          const q = query(collection(db, "users"), where("email", "==", session.user.email));
+          // Search by email regardless of login method to find the unified profile
+          const q = query(collection(db, "users"), where("email", "==", session.user.email.toLowerCase()));
           const snapshot = await getDocs(q);
           
           if (!snapshot.empty) {
             const data = snapshot.docs[0].data();
             setCustomName(data.displayName || data.FULL_NAME || data.name || null);
+            setFirestorePhoto(data.photoURL || null);
           }
         } catch (error) {
-          console.error("Failed to fetch operative identity from Firestore:", error);
+          console.error("Failed to sync identity:", error);
         }
       }
     };
-    
-    fetchCustomName();
+    fetchIdentity();
   }, [session]);
 
-  // Fetch User's Missions and Certificates
+  // 🎯 2. Real-time Missions & Certificates Fetch (Unified by Email)
   useEffect(() => {
     if (!session?.user?.email) return;
 
-    // 1. Fetch Registrations (Missions)
-    const qMissions = query(
-      collection(db, "registrations"), 
-      where("userEmail", "==", session.user.email)
-    );
-    
+    const userEmail = session.user.email.toLowerCase();
+
+    // Mission Stream
+    const qMissions = query(collection(db, "registrations"), where("userEmail", "==", userEmail));
     const unsubMissions = onSnapshot(qMissions, (snapshot) => {
       setMyMissions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
-    // 2. Fetch Certificates
-    const qCertificates = query(
-      collection(db, "certificates"), 
-      where("userEmail", "==", session.user.email)
-    );
-
+    // Certificates Stream
+    const qCertificates = query(collection(db, "certificates"), where("userEmail", "==", userEmail));
     const unsubCertificates = onSnapshot(qCertificates, (snapshot) => {
       setMyCertificates(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoadingData(false);
@@ -84,6 +79,36 @@ export default function UserDashboard() {
     };
   }, [session?.user?.email]);
 
+  // 🎯 3. Google Identity Linker Logic
+  const handleLinkGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    if (!auth.currentUser) return;
+
+    try {
+      const result = await linkWithPopup(auth.currentUser, provider);
+      const user = result.user;
+
+      // Update Firestore with Google Photo to "Lock" the identity
+      const q = query(collection(db, "users"), where("email", "==", user.email?.toLowerCase()));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        const userDocRef = doc(db, "users", snapshot.docs[0].id);
+        await updateDoc(userDocRef, { 
+          photoURL: user.photoURL 
+        });
+        setFirestorePhoto(user.photoURL);
+        alert("IDENTITY_LINKED: Google Profile Synchronized.");
+      }
+    } catch (error: any) {
+      if (error.code === "auth/credential-already-in-use") {
+        alert("ERROR: This Google account is already linked to another operative.");
+      } else {
+        alert("SYSTEM_FAILURE: Link aborted.");
+      }
+    }
+  };
+
   if (status === "loading") {
     return (
       <div className="min-h-screen bg-[#05060a] flex items-center justify-center">
@@ -94,10 +119,10 @@ export default function UserDashboard() {
 
   if (!session?.user) return null;
 
-  // 🎯 THE FIX: Smart Display Name (Same as Navbar)
+  // 🎯 THE MIRROR: Smart Display Name & Photo Mirroring
   const finalName = customName || session.user.name || session.user.email?.split("@")[0] || "OPERATIVE";
   const avatarName = /\d/.test(finalName) ? "OP" : finalName;
-  const avatarSrc = session.user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=0f111a&color=00d2ff&bold=true`;
+  const avatarSrc = firestorePhoto || session.user.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(avatarName)}&background=0f111a&color=00d2ff&bold=true`;
 
   return (
     <div className="min-h-screen bg-[#05060a] pt-20 md:pt-24 px-4 md:px-8 font-mono text-white selection:bg-[#50fa7b] selection:text-black pb-12">
@@ -113,11 +138,24 @@ export default function UserDashboard() {
           
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
-              {/* 🎯 THE FIX: Apply the finalName here! */}
               <h1 className="text-2xl md:text-3xl font-black uppercase tracking-wider truncate">{finalName}</h1>
               <span className="bg-[#50fa7b]/10 text-[#50fa7b] border border-[#50fa7b]/20 px-3 py-1 rounded-full text-[10px] tracking-widest uppercase font-bold shrink-0">Authorized</span>
             </div>
-            <p className="text-gray-500 text-xs md:text-sm tracking-widest truncate">{session.user.email}</p>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-gray-500 text-xs md:text-sm tracking-widest truncate">{session.user.email}</p>
+              
+              {/* 🎯 SYNC BUTTON: Only shows if no Google Photo is stashed yet */}
+              {!firestorePhoto && !session.user.image && (
+                <button 
+                  onClick={handleLinkGoogle}
+                  className="flex items-center gap-2 text-[9px] bg-white/5 hover:bg-white/10 border border-white/10 px-2 py-1 rounded transition-all text-[#00d2ff] uppercase tracking-tighter"
+                >
+                  <img src="https://authjs.dev/img/providers/google.svg" width="10" alt="G" />
+                  Sync_Google_Identity
+                </button>
+              )}
+            </div>
           </div>
 
           <Link href="/#Home" className="hidden md:flex items-center gap-2 text-gray-500 hover:text-[#00d2ff] transition-colors text-xs uppercase tracking-widest">
@@ -142,16 +180,16 @@ export default function UserDashboard() {
           </button>
         </div>
 
-        {/* LOADING STATE */}
+        {/* DATA CONTENT */}
         {loadingData ? (
           <div className="text-[#00d2ff] font-mono animate-pulse tracking-widest text-center py-12">
             [ Fetching_Personal_Records... ]
           </div>
         ) : (
-          <>
+          <div className="animate-fadeUp">
             {/* TAB CONTENT: MISSIONS */}
             {activeTab === "MISSIONS" && (
-              <div className="space-y-4 animate-fadeUp">
+              <div className="space-y-4">
                 {myMissions.length > 0 ? myMissions.map((mission) => (
                   <div key={mission.id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0a0c10] border border-white/5 p-5 md:p-6 rounded-2xl hover:border-[#00d2ff]/30 transition-all group">
                     <div>
@@ -177,10 +215,10 @@ export default function UserDashboard() {
 
             {/* TAB CONTENT: CERTIFICATES */}
             {activeTab === "CERTIFICATES" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fadeUp">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {myCertificates.length > 0 ? myCertificates.map((cert) => (
                   <div key={cert.id} className="bg-[#0a0c10] border border-white/5 p-6 rounded-3xl relative overflow-hidden group hover:border-[#50fa7b]/30 transition-all">
-                    <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
+                    <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                       <svg className="w-24 h-24 text-[#50fa7b]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
                     </div>
                     
@@ -201,7 +239,7 @@ export default function UserDashboard() {
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
 
       </div>

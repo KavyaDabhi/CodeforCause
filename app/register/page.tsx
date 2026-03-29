@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, collection, query, where, getDocs } from "firebase/firestore"; // 🎯 Added collection, query, where, getDocs
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -36,7 +36,7 @@ function RegisterContent() {
 
     setLoading(true);
 
-    const isCharusat = email.endsWith("@charusat.ac.in") || email.endsWith("@charusat.edu.in");
+    const isCharusat = email.toLowerCase().endsWith("@charusat.ac.in") || email.toLowerCase().endsWith("@charusat.edu.in");
     
     if (!isCharusat) {
       alert("CRITICAL_ERROR: Access restricted to @charusat domains.");
@@ -45,6 +45,15 @@ function RegisterContent() {
     }
 
     try {
+      // 🎯 UNIQUE IDENTITY CHECK: Ensure Full Name isn't already in the registry
+      const q = query(collection(db, "users"), where("displayName", "==", name));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        alert("IDENTITY_EXISTS: This name is already registered. Use a different name.");
+        setLoading(false);
+        return;
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -52,7 +61,7 @@ function RegisterContent() {
         await setDoc(doc(db, "users", user.uid), {
           uid: user.uid,
           displayName: name,
-          email: email,
+          email: email.toLowerCase(), // 🎯 Store in lowercase
           role: "student",
           initializedAt: new Date().toISOString(),
         });

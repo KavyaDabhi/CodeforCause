@@ -1,6 +1,8 @@
 import NextAuth, { DefaultSession } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 declare module "next-auth" {
   interface Session {
@@ -55,12 +57,24 @@ const handler = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
-    async signIn({ user, account }) {
-      if (account?.provider === "google") {
-        return !!user.email?.endsWith("@charusat.edu.in"); 
+  async signIn({ user, account }) {
+    if (account?.provider === "google") {
+      try {
+        // This is the "Handshake" - it runs every time someone clicks 'Continue with Google'
+        const userRef = doc(db, "users", user.id); 
+        await setDoc(userRef, {
+          displayName: user.name,
+          email: user.email?.toLowerCase(),
+          photoURL: user.image, // 📸 Syncs Google photo to Firestore
+          role: "student",
+          lastLogin: new Date().toISOString()
+        }, { merge: true });
+      } catch (error) {
+        console.error("Error syncing Google User to Firestore:", error);
       }
-      return true; // Allows the manual credentials to pass
-    },
+    }
+    return true;
+  },
     async jwt({ token, user, profile, account }) {
       // Safely grab the Google token ONLY if they used Google to log in
       if (account?.provider === "google") {
