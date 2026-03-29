@@ -66,12 +66,12 @@ export default function ContactPage() {
  
           {/* Office Hours Card */}
           <div className="bg-[#0a0c10] border border-[#00d2ff]/10 rounded-2xl p-5 md:p-6 shadow-[inset_0_0_20px_rgba(0,210,255,0.02)]">
-            <h4 className="text-white font-bold mb-3 uppercase text-xs tracking-widest">Operational Window</h4>
+            <h4 className="text-white font-bold mb-3 uppercase text-xs tracking-widest">Working Hours</h4>
             <p className="text-gray-400 text-sm mb-2">
-              <strong className="text-[#00d2ff]">Mon - Sat:</strong> 9:10 AM - 4:20 PM
+              <strong className="text-[#00d2ff]">Mon - Sat:</strong> 09:10 AM - 4:20 PM (Except 2nd & 4th Sat)
             </p>
             <p className="text-gray-400 text-sm">
-              <strong className="text-red-500/80">Sun:</strong> Offline
+              <strong className="text-red-500/80">Sun:</strong>[ CAMPUS OFFLINE ] University closed on Sundays. We'll respond next working day
             </p>
           </div>
         </div>

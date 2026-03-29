@@ -27,6 +27,7 @@ export default function Home() {
   const curatedEventsCount = "04"; 
   const hackathonsCount = "03"; 
 
+  // ✅ Handles ?scrollTo= param (used by navbar + dashboard links)
   useEffect(() => {
     if (!isBooting) {
       const params = new URLSearchParams(window.location.search);
@@ -34,6 +35,7 @@ export default function Home() {
       if (scrollTo) {
         setTimeout(() => {
           document.getElementById(scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Clean the URL after scrolling so it doesn't persist on refresh
           window.history.replaceState({}, '', '/');
         }, 500);
       }
@@ -52,7 +54,7 @@ export default function Home() {
       <main className={`flex min-h-screen flex-col items-center justify-start relative bg-[#05060a] transition-opacity duration-1000 ${isBooting ? 'opacity-0 h-screen overflow-hidden' : 'opacity-100 overflow-x-hidden'}`}>
       <BackgroundTraces />
 
-      {/* 1. HERO SECTION (Clean, no warnings, no timers) */}
+      {/* 1. HERO SECTION */}
       <section id="home" className="relative w-full flex flex-col items-center justify-center min-h-[calc(100vh-80px)] p-8 text-center scroll-mt-20">
         <div className="absolute inset-0 pointer-events-none opacity-10 z-0"
              style={{ 
@@ -116,13 +118,10 @@ export default function Home() {
       <TeamSection />
       <ContactSection />
 
-      {/* ========================================= */}
-      {/* 4. FOOTER                                 */}
-      {/* ========================================= */}
+      {/* 4. FOOTER */}
       <footer className="w-full bg-[#020305] border-t border-[#00d2ff]/30 pt-16 pb-8 relative z-10 text-left mt-auto">
         <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
           <div>
-            {/* 🎯 LOGO LINK & HOVER ADDED */}
             <div className="flex items-center gap-3 mb-6">
               <a 
                 href="https://www.charusat.ac.in/" 
@@ -163,7 +162,6 @@ export default function Home() {
               </li>
             </ul>
 
-            {/* 🗺️ MAP RESTORED TO FULL COLOR */}
             <div className="w-full h-44 rounded-xl overflow-hidden border border-white/10 transition-all duration-500 shadow-[0_0_15px_rgba(0,210,255,0.05)] hover:border-[#00d2ff]/40">
               <iframe
                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3683.746093120119!2d72.81735417616183!3d22.59959397947159!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x395e50c43cdea6c7%3A0x5074fe9e0c1c22a0!2sChandubhai%20S.%20Patel%20Institute%20of%20Technology!5e0!3m2!1sen!2sin!4v1700000000000!5m2!1sen!2sin"
