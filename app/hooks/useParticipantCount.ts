@@ -1,19 +1,28 @@
-// hooks/useParticipantCount.ts
-// Returns a live real-time count of registrations for a given eventId.
-// Uses onSnapshot so the number updates instantly when someone registers.
-
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 
-export function useParticipantCount(eventId: string): number {
-  const [count, setCount] = useState(0);
+export function useParticipantCount(eventId: string) {
+  const [count, setCount] = useState<number>(0);
 
   useEffect(() => {
     if (!eventId) return;
-    const q = query(collection(db, "registrations"), where("eventId", "==", eventId));
-    const unsub = onSnapshot(q, snapshot => setCount(snapshot.size));
-    return () => unsub();
+
+    // Target the registrations collection for this specific mission
+    const q = query(
+      collection(db, "registrations"),
+      where("eventId", "==", eventId)
+    );
+
+    // Listen for real-time updates
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      // If you want to count total humans (including team members), you'd sum up doc.data().teamSize
+      // But counting the total number of registrations (squads/solos) is usually best:
+      setCount(snapshot.size); 
+    });
+
+    // Cleanup the listener when unmounted
+    return () => unsubscribe();
   }, [eventId]);
 
   return count;
