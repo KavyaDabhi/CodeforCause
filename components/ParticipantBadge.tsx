@@ -6,7 +6,8 @@
 //   <ParticipantBadge eventId={event.id} />
 
 "use client";
-import { useParticipantCount } from "@/hooks/useParticipantCount";
+// 🚀 FIXED IMPORT PATH HERE
+import { useParticipantCount } from "../app/hooks/useParticipantCount";
 
 export default function ParticipantBadge({ eventId }: { eventId: string }) {
   const count = useParticipantCount(eventId);
