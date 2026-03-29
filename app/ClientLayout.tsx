@@ -197,7 +197,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     >
                       <img
                         src={avatarSrc}
-                        alt="User"
+                        alt="Profile"
                         referrerPolicy="no-referrer"
                         style={{
                           width: "28px", height: "28px", borderRadius: "50%",
