@@ -77,27 +77,32 @@ export default function EventRegistrationPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      // 🚀 SMART NAME EXTRACTOR: Finds the name field in your custom form
+      // 1. 🚀 SMART EXTRACTION: Find the answer to the "Name" question
       let extractedName = "";
+      
       if (formSchema?.questions) {
-        const nameQuestion = formSchema.questions.find((q: any) => {
-          const label = q.label.toLowerCase().replace(/[\s_\-]/g, "");
-          return ["name", "fullname", "yourname", "participant", "studentname"].some(kw => label.includes(kw));
+        // We look for a question label that includes "name", "participant", or "student"
+        const nameField = formSchema.questions.find((q: any) => {
+          const label = q.label.toLowerCase();
+          return label.includes("name") || label.includes("participant") || label.includes("student");
         });
-        
-        if (nameQuestion && customAnswers[nameQuestion.id]) {
-          extractedName = customAnswers[nameQuestion.id].trim();
+
+        if (nameField && customAnswers[nameField.id]) {
+          extractedName = customAnswers[nameField.id].trim();
         }
       }
 
+      // 2. Prepare the Payload
       const payload = {
         eventId,
         eventTitle: eventData.title,
         formId: formSchema?.id || "N/A",
-        userEmail: session?.user?.email?.toLowerCase() || "guest@cfc.com", 
-        // 🚀 PRIORITIZE form input over Google Profile Name
-        userName: extractedName || session?.user?.name || "Participant",
-        responses: customAnswers,
+        userEmail: session?.user?.email?.toLowerCase() || "guest@cfc.com",
+        
+        // 🚀 THE FIX: Use extracted name if found, otherwise fallback to session
+        userName: extractedName || session?.user?.name || session?.user?.email?.split('@')[0] || "Participant",
+        
+        responses: customAnswers, 
         attendanceStatus: "REGISTERED",
         certificateIssued: false,
         submittedAt: new Date().toISOString(),
@@ -107,7 +112,7 @@ export default function EventRegistrationPage() {
       await addDoc(collection(db, "registrations"), payload);
       setSuccess(true);
     } catch (err) {
-      console.error(err);
+      console.error("Registration failed:", err);
       alert("Transmission Failed. Try again.");
     } finally {
       setSubmitting(false);
