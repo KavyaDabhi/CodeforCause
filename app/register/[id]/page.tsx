@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+// 🚀 Added query, where, and getDocs to the imports
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs } from "firebase/firestore";
 import { useSession } from "next-auth/react";
 
 const cyberStyles = `
@@ -14,7 +15,8 @@ const cyberStyles = `
 `;
 
 export default function EventRegistrationPage() {
-  const { data: session } = useSession();
+  // 🚀 Pulled in 'status' from useSession so we know when they are fully logged in
+  const { data: session, status } = useSession();
   const params = useParams();
   const eventId = params.id as string;
 
@@ -26,8 +28,13 @@ export default function EventRegistrationPage() {
   const [eventData, setEventData] = useState<any>(null);
   const [formSchema, setFormSchema] = useState<any>(null);
   
+  // 🚀 New states for the Pre-Flight Check
+  const [checkingStatus, setCheckingStatus] = useState(true);
+  const [isAlreadyRegistered, setIsAlreadyRegistered] = useState(false);
+
   const [customAnswers, setCustomAnswers] = useState<Record<string, any>>({});
 
+  // 1. Fetch Event & Form Data
   useEffect(() => {
     const fetchMissionData = async () => {
       if (!eventId) return;
@@ -37,21 +44,18 @@ export default function EventRegistrationPage() {
           setEventData(eventDoc.data());
         }
 
-        import("firebase/firestore").then(async ({ query, where, getDocs }) => {
-          const q = query(collection(db, "forms"), where("eventId", "==", eventId));
-          const querySnapshot = await getDocs(q);
-          if (!querySnapshot.empty) {
-            const formData = querySnapshot.docs[0].data();
-            setFormSchema({ id: querySnapshot.docs[0].id, ...formData });
-            
-            const initialAnswers: Record<string, any> = {};
-            formData.questions?.forEach((q: any) => {
-              initialAnswers[q.id] = q.type === "CHECKBOX" ? [] : "";
-            });
-            setCustomAnswers(initialAnswers);
-          }
-        });
-
+        const q = query(collection(db, "forms"), where("eventId", "==", eventId));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+          const formData = querySnapshot.docs[0].data();
+          setFormSchema({ id: querySnapshot.docs[0].id, ...formData });
+          
+          const initialAnswers: Record<string, any> = {};
+          formData.questions?.forEach((q: any) => {
+            initialAnswers[q.id] = q.type === "CHECKBOX" ? [] : "";
+          });
+          setCustomAnswers(initialAnswers);
+        }
       } catch (err) {
         console.error("Failed to fetch mission", err);
       } finally {
@@ -60,6 +64,40 @@ export default function EventRegistrationPage() {
     };
     fetchMissionData();
   }, [eventId]);
+
+  // 2. 🚀 PRE-FLIGHT CHECK: Has this operative already registered?
+  useEffect(() => {
+    const checkExistingRegistration = async () => {
+      // Wait for session to load
+      if (status === "loading") return; 
+      
+      // If no email, they aren't logged in, stop checking
+      if (!session?.user?.email) {
+        setCheckingStatus(false);
+        return;
+      }
+
+      try {
+        const q = query(
+          collection(db, "registrations"),
+          where("eventId", "==", eventId),
+          where("userEmail", "==", session.user.email.toLowerCase())
+        );
+        const snapshot = await getDocs(q);
+        
+        if (!snapshot.empty) {
+          // They already have a document for this event!
+          setIsAlreadyRegistered(true);
+        }
+      } catch (err) {
+        console.error("Failed to verify status:", err);
+      } finally {
+        setCheckingStatus(false);
+      }
+    };
+
+    checkExistingRegistration();
+  }, [eventId, session, status]);
 
   const handleCustomAnswer = (questionId: string, value: any, type: string) => {
     if (type === "CHECKBOX") {
@@ -77,32 +115,25 @@ export default function EventRegistrationPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      // 1. 🚀 SMART EXTRACTION: Find the answer to the "Name" question
       let extractedName = "";
-      
       if (formSchema?.questions) {
-        // We look for a question label that includes "name", "participant", or "student"
-        const nameField = formSchema.questions.find((q: any) => {
-          const label = q.label.toLowerCase();
-          return label.includes("name") || label.includes("participant") || label.includes("student");
+        const nameQuestion = formSchema.questions.find((q: any) => {
+          const label = q.label.toLowerCase().replace(/[\s_\-]/g, "");
+          return ["name", "fullname", "yourname", "participant", "studentname"].some(kw => label.includes(kw));
         });
-
-        if (nameField && customAnswers[nameField.id]) {
-          extractedName = customAnswers[nameField.id].trim();
+        
+        if (nameQuestion && customAnswers[nameQuestion.id]) {
+          extractedName = customAnswers[nameQuestion.id].trim();
         }
       }
 
-      // 2. Prepare the Payload
       const payload = {
         eventId,
         eventTitle: eventData.title,
         formId: formSchema?.id || "N/A",
-        userEmail: session?.user?.email?.toLowerCase() || "guest@cfc.com",
-        
-        // 🚀 THE FIX: Use extracted name if found, otherwise fallback to session
-        userName: extractedName || session?.user?.name || session?.user?.email?.split('@')[0] || "Participant",
-        
-        responses: customAnswers, 
+        userEmail: session?.user?.email?.toLowerCase() || "guest@cfc.com", 
+        userName: extractedName || session?.user?.name || "Participant",
+        responses: customAnswers,
         attendanceStatus: "REGISTERED",
         certificateIssued: false,
         submittedAt: new Date().toISOString(),
@@ -112,15 +143,37 @@ export default function EventRegistrationPage() {
       await addDoc(collection(db, "registrations"), payload);
       setSuccess(true);
     } catch (err) {
-      console.error("Registration failed:", err);
+      console.error(err);
       alert("Transmission Failed. Try again.");
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-[#05060a] flex items-center justify-center text-[#00d2ff] font-mono animate-pulse tracking-widest uppercase">Decrypting_Mission_Data...</div>;
+  // 🚀 Halt rendering until both the event data and the registration check are done
+  if (loading || checkingStatus || status === "loading") {
+    return <div className="min-h-screen bg-[#05060a] flex items-center justify-center text-[#00d2ff] font-mono animate-pulse tracking-widest uppercase">Decrypting_Mission_Data...</div>;
+  }
+
   if (!eventData) return <div className="min-h-screen bg-[#05060a] flex items-center justify-center text-[#ff5555] font-mono tracking-widest uppercase">Mission_Not_Found</div>;
+
+  // 🚀 NEW UI: If they are already registered, block the form!
+  if (isAlreadyRegistered) {
+    return (
+      <div className="min-h-screen bg-[#05060a] flex items-center justify-center p-4 font-mono">
+        <div className="bg-[#0B111A] border border-[#f1fa8c]/40 rounded-3xl p-10 max-w-md w-full text-center shadow-[0_0_50px_rgba(241,250,140,0.1)]">
+          <div className="w-20 h-20 bg-[#f1fa8c]/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-[#f1fa8c]/30">
+            <span className="text-[#f1fa8c] text-3xl">!</span>
+          </div>
+          <h2 className="text-[#f1fa8c] font-black text-xl uppercase tracking-widest mb-2">Already Assigned</h2>
+          <p className="text-gray-400 text-xs mb-8">Our records show you are already registered for {eventData.title}.</p>
+          <Link href="/dashboard" className="block bg-[#f1fa8c] text-black font-black w-full p-4 rounded-xl text-xs uppercase tracking-widest hover:bg-white transition-all">
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
