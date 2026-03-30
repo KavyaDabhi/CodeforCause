@@ -1,27 +1,7 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
-import webpush from "web-push";
-// lib/firebase-admin.ts
-import admin from "firebase-admin";
-
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
-}
-
-export default admin;
-
-const db = admin.firestore();
-
-webpush.setVapidDetails(
-  "mailto:cfc@charusat.ac.in",
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -29,12 +9,33 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // ── All imports and inits INSIDE the handler ──
+  const admin = (await import("firebase-admin")).default;
+  const webpush = (await import("web-push")).default;
+
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      }),
+    });
+  }
+
+  const db = admin.firestore();
+
+  webpush.setVapidDetails(
+    "mailto:cfc@charusat.ac.in",
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    process.env.VAPID_PRIVATE_KEY!
+  );
+
   try {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split("T")[0]; 
+    const tomorrowStr = tomorrow.toISOString().split("T")[0];
 
-    // 2. Use Admin SDK syntax (.get() instead of getDocs)
     const eventsSnap = await db.collection("events").where("date", "==", tomorrowStr).get();
     const tomorrowEvents = eventsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
 
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
 
     for (const event of tomorrowEvents) {
       const regsSnap = await db.collection("registrations").where("eventId", "==", event.id).get();
-      
+
       const registeredEmails = new Set(
         regsSnap.docs.map(d => d.data().userEmail?.toLowerCase()).filter(Boolean)
       );
@@ -74,9 +75,9 @@ export async function GET(request: Request) {
         } catch (err: any) {
           console.error(`Push failed for ${subDoc.email}:`, err.message);
           failed++;
-          
-          // Optional Pro-Tip: If err.statusCode === 410, the user revoked permission. 
-          // You should delete their sub from Firestore here so you don't keep pinging a dead device!
+          if (err.statusCode === 410) {
+            await db.collection("pushSubscriptions").doc(subDoc.email).delete();
+          }
         }
       }
     }
