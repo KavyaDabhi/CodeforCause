@@ -8,6 +8,7 @@ import BackgroundTraces from '@/components/BackgroundTraces';
 
 // SECTION IMPORTS
 import AboutSection from '@/components/sections/About';
+import ArchiveSection from '@/components/sections/Archive'; // 🚀 Added Archive Section
 import OperationsSection from '@/components/sections/Operations';
 import TeamSection from '@/components/sections/Team';
 import ContactSection from '@/components/sections/Contact';
@@ -99,6 +100,9 @@ export default function Home() {
           <a href="#about" onClick={(e) => scrollToId(e, 'about')} className="group flex items-center justify-center gap-2 px-8 py-4 bg-transparent text-gray-300 border border-brandCard hover:border-codeBlue hover:text-codeBlue rounded-xl font-semibold text-lg transition-all duration-300 font-mono">
             WHO_ARE_WE?
           </a>
+          <a href="#archive" onClick={(e) => scrollToId(e, 'archive')} className="group flex items-center justify-center gap-2 px-8 py-4 bg-transparent text-[#50fa7b] border border-[#50fa7b]/30 hover:border-[#50fa7b] hover:shadow-[0_0_15px_rgba(80,250,123,0.2)] rounded-xl font-semibold text-lg transition-all duration-300 font-mono">
+            MISSION_ARCHIVE
+          </a>
         </div>
       </section>
 
@@ -114,6 +118,10 @@ export default function Home() {
 
       {/* 3. MODULAR COMPONENTS */}
       <AboutSection />
+      
+      {/* 🚀 INSERTED ARCHIVE SECTION */}
+      <ArchiveSection />
+
       <OperationsSection />
       <TeamSection />
       <ContactSection />
@@ -142,6 +150,7 @@ export default function Home() {
             <ul className="space-y-4 text-gray-400 text-sm font-mono">
               <li><a href="#home" onClick={(e) => scrollToId(e, 'home')} className="hover:text-[#00d2ff] transition-colors">{">"} ~/home</a></li>
               <li><a href="#about" onClick={(e) => scrollToId(e, 'about')} className="hover:text-[#00d2ff] transition-colors">{">"} ~/about</a></li>
+              <li><a href="#archive" onClick={(e) => scrollToId(e, 'archive')} className="hover:text-[#50fa7b] transition-colors">{">"} ~/archive</a></li>
               <li><a href="#operations" onClick={(e) => scrollToId(e, 'operations')} className="hover:text-[#00d2ff] transition-colors">{">"} ~/operations</a></li>
               <li><a href="#team" onClick={(e) => scrollToId(e, 'team')} className="hover:text-[#00d2ff] transition-colors">{">"} ~/authorized_nodes</a></li>
             </ul>

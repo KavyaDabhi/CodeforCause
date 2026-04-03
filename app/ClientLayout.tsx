@@ -16,7 +16,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const [isScrolled, setIsScrolled] = useState(false);
   const [shouldHideForModal, setShouldHideForModal] = useState(false);
   const [customName, setCustomName] = useState<string | null>(null);
-  const [customPhoto, setCustomPhoto] = useState<string | null>(null); // ✅ NEW
+  const [customPhoto, setCustomPhoto] = useState<string | null>(null);
 
   // ── Profile dropdown state
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -40,16 +40,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   }, []);
 
   // ── Fetch custom name AND photo from Firestore
-  // ✅ FIX: Removed the `!session?.user?.image` guard.
-  //    We always check Firestore for custom-login users.
-  //    Google-login users already have session.user.image, so
-  //    customPhoto stays null and the Google URL is used directly.
   useEffect(() => {
     const fetchUserData = async () => {
       if (!session?.user?.email) return;
-
-      // Only query Firestore for custom (non-Google) logins.
-      // Google OAuth always populates session.user.image itself.
       if (session?.user?.image) return;
 
       try {
@@ -58,7 +51,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         if (!snapshot.empty) {
           const data = snapshot.docs[0].data();
           setCustomName(data.displayName || data.FULL_NAME || data.name || null);
-          // ✅ Pick up whichever field your sync button writes the Google photo URL to
           setCustomPhoto(data.photoURL || data.profilePhoto || data.image || null);
         }
       } catch (error) {
@@ -74,8 +66,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setIsScrolled(window.scrollY > 50);
       setShouldHideForModal(document.body.style.overflow === "hidden");
       if (pathname !== "/") return;
-      const sections = ["contact", "team", "operations", "about", "home"];
+      
+      // 🚀 Added "archive" to the scroll-spy detection array
+      const sections = ["contact", "team", "operations", "archive", "about", "home"];
       const triggerPoint = window.innerHeight / 3;
+      
       for (const id of sections) {
         const element = document.getElementById(id);
         if (element) {
@@ -137,9 +132,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     } as React.CSSProperties;
   };
 
+  // 🚀 Added Archive to the main navigation links
   const navLinks = [
     { id: "home", label: "Home" },
     { id: "about", label: "About" },
+    { id: "archive", label: "Archive" },
     { id: "operations", label: "Events" },
     { id: "team", label: "Team" },
     { id: "contact", label: "Contact" },
@@ -148,7 +145,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   const isAdminPage = pathname === "/admin" || pathname === "/login";
   const finalName = customName || session?.user?.name || session?.user?.email?.split("@")[0] || "U";
 
-  // ✅ Priority: Google session image → Firestore synced photo → generated initials avatar
   const avatarSrc =
     session?.user?.image ||
     customPhoto ||
@@ -212,11 +208,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                       style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center" }}
                     >
                       <img
-                        src={avatarSrc} // ✅ Uses the resolved priority chain above
+                        src={avatarSrc}
                         alt="Profile"
                         referrerPolicy="no-referrer"
                         onError={(e) => {
-                          // Last-resort fallback if even the Firestore URL fails
                           e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(finalName)}&background=0B111A&color=50fa7b&bold=true`;
                         }}
                         style={{
