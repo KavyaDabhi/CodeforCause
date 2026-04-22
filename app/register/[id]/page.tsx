@@ -190,7 +190,8 @@ export default function EventRegistrationPage() {
 
           {/* Sign in button */}
           <button
-            onClick={() => signIn("google", { callbackUrl: `/events/${eventId}` })}
+          // Change it to this if using hash routing:
+onClick={() => signIn("google", { callbackUrl: `/#/events/${eventId}` })}
             className="w-full flex items-center justify-center gap-3 bg-white text-black font-black p-4 rounded-2xl text-xs uppercase tracking-[0.15em] transition-all hover:bg-[#00d2ff] hover:text-black active:scale-95 mb-4 shadow-lg"
           >
             {/* Google icon */}
