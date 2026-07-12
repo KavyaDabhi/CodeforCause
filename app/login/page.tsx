@@ -190,7 +190,7 @@ function LoginContent() {
           Continue with Google
         </button>
 
-        <Link href="/register" style={{ textDecoration: "none" }}>
+        <Link href="/signup" style={{ textDecoration: "none" }}>
           <button style={{ ...secondaryBtn, marginTop: "12px", borderColor: "#50fa7b", color: "#50fa7b" }}>
             [ NEW_USER_REGISTRATION ]
           </button>

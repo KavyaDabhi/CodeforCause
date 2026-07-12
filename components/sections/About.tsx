@@ -1,6 +1,7 @@
 import Link from 'next/link';
- 
+ import { useGotham } from '@/app/context/GothamContext';
 export default function AboutSection() {
+  const { isGothamMode } = useGotham();
   return (
     <section 
       id="about" 
