@@ -45,7 +45,7 @@ export default function ContactPage() {
             </div>
             <div>
               <h4 className="text-white font-bold mb-1 uppercase text-xs tracking-widest">Email</h4>
-              <p className="text-[#00d2ff] text-sm font-mono hover:underline cursor-pointer break-all">root@codeforcause.tech</p>
+              <p className="text-[#00d2ff] text-sm font-mono hover:underline cursor-pointer break-all">23ec017@charusat.edu.in</p>
             </div>
           </div>
  
